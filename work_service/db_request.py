@@ -30,6 +30,10 @@ class Request:
         res_d['link'] = f'https://www.ted.com/talks/{d["video_id"]}'
         res_d['content'] = d['content']
         res_d['startTime'] = self._convert_time(d['startTime'])
+
+        start_time = (d["startTime"] // 1000)
+        end_time = start_time + (d['duration'] // 1000 + 5)
+        res_d['video_link'] = f'''{d["video_link"]}#t={start_time},{end_time}'''
         return res_d
 
     def _convert_time(self, time: str):

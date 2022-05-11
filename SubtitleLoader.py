@@ -1,6 +1,10 @@
+import random
+import re
 import sqlite3
+from time import sleep
 from urllib.request import urlopen
 from urllib.error import HTTPError
+from bs4 import BeautifulSoup
 import json
 from tqdm import tqdm
 
@@ -19,7 +23,7 @@ class SubtitleLoader():
             '''
             CREATE TABLE subtitles
             (video_id integer, duration integer, content text, 
-            startOfParagraph integer, startTime integer)
+            startOfParagraph integer, startTime integer, video_link text)
             ''')
             
     def set_lang(self, lang: str):
@@ -36,6 +40,19 @@ class SubtitleLoader():
     
     def add_id(self, video_id):
         self.parse_subtitles(video_id)
+
+    def _find_video_link(self, video_id: str) -> str:
+        try:
+            sleep(3 + random.uniform(-1, 1))
+            url = f'https://www.ted.com/talks/{video_id}'
+            text = urlopen(url).read().decode('utf8')
+            res = re.findall('https://py.tedcdn.com/consus/projects/.*.mp4', text)
+            if len(res) == 1:
+                return res[0]
+            return 'None'
+        except HTTPError as e:
+            return 'None'
+
     
     def parse_subtitles(self, video_id):
         if self._id_exist(video_id):
@@ -54,14 +71,16 @@ class SubtitleLoader():
             
     def _add_content(self, video_id, content):
         rows = []
+        video_link = self._find_video_link(video_id)
         for indict in content['captions']:
             rows.append([
                 video_id, 
                 indict['duration'],
                 indict['content'],
                 indict['startOfParagraph'],
-                indict['startTime']])   
-        self.cur.executemany("insert into subtitles values (?, ?, ?, ?, ?)", rows)
+                indict['startTime'],
+                video_link])
+        self.cur.executemany("insert into subtitles values (?, ?, ?, ?, ?, ?)", rows)
             
     def _id_exist(self, video_id: int):
         query = f"""
@@ -79,6 +98,6 @@ class SubtitleLoader():
         
 if __name__ == "__main__":
     sub_load = SubtitleLoader("subtitles.db")
-    sub_load.add_ids(1, 1000)
+    sub_load.add_ids(1, 100)
     sub_load.commit()
     sub_load.close()
